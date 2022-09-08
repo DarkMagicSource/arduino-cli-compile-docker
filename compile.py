@@ -32,7 +32,11 @@ def compile_sketch(spec):
             core_name_version = f"{core_name} v{core_version}" \
                 if core_version is not None else f"{core_name} (latest)"
             print(f"Installing core {core_name_version}... ", end="")
-            success = _install_arduino_core(core_name, core_version)
+            if "url" in spec["target"]:
+                success = _install_arduino_core(
+                    core_name, spec["target"]["url"], core_version)
+            else:
+                success = _install_arduino_core(core_name, "", core_version)
             print("Done!" if success else "Failed!")
             if not success:
                 sys.exit(1)
@@ -69,13 +73,12 @@ def _parse_version(line):
 
 
 def _add_arduino_core_package_index(url):
-    return _run_shell_command(["arduino-cli", "core", "update-index",
-                               "--additional-urls", url])
+    return _run_shell_command(["arduino-cli", "core", "update-index", "--additional-urls", url])
 
 
-def _install_arduino_core(name, version=None):
+def _install_arduino_core(name, url, version=None):
     core = f"{name}@{version}" if version is not None else name
-    return _run_shell_command(["arduino-cli", "core", "install", core])
+    return _run_shell_command(["arduino-cli", "core", "install", core, "--additional-urls", url])
 
 
 def _install_arduino_lib(name, version=None):
@@ -85,10 +88,7 @@ def _install_arduino_lib(name, version=None):
 
 def _compile_arduino_sketch(sketch_path, board, output_path):
     os.makedirs("dist/", exist_ok=True)
-    return _run_shell_command(["arduino-cli", "compile",
-                               "-b", board,
-                               "-o", f"dist/{output_path}",
-                               sketch_path], stdout=True)
+    return _run_shell_command(["arduino-cli", "compile", "-b", board, "--output-dir", f"dist/{output_path}", sketch_path], stdout=True)
 
 
 def _run_shell_command(arguments, stdout=False, stderr=True):
